@@ -3,9 +3,9 @@ package services
 import "WB_L00/pkg/repository"
 
 type Service struct {
-	repo *repository.Repostitory
+	Repo *repository.Repository
 }
 
-func NewService(repo *repository.Repostitory) *Service {
-	return &Service{repo: repo}
+func NewService(repo *repository.Repository) *Service {
+	return &Service{Repo: repo}
 }

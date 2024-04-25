@@ -1,13 +1,18 @@
 package main
 
 import (
+	"WB_L00"
+	"WB_L00/pkg/handler"
 	"WB_L00/pkg/repository"
+	"WB_L00/pkg/services"
+	"context"
 	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/nats-io/stan.go"
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -18,7 +23,7 @@ func main() {
 		Port:     "5432",
 		Username: "postgres",
 		Password: "4022",
-		DBName:   "db1",
+		DBName:   "orderswb",
 		SSLMode:  "disable",
 	})
 
@@ -27,42 +32,51 @@ func main() {
 	}
 	defer db.Close()
 
-	//repos := repository.NewRepository(db)
-	//service := services.NewService(repos)
+	repos := repository.NewRepository(db)
+	service := services.NewService(repos)
 
 	sc, err := connectNatsStream()
+	if err != nil {
+		log.Fatalf("Ошибка при подключении к NATS Streaming: %v", err)
+	}
 	defer sc.Close()
 
-	// Публикация сообщения
-	subject := "test-subject"
-	message := "Messagegfds!!!FDS"
+	cache := WB_L00.NewCache()
 
-	subscription, err := sc.Subscribe(subject, func(msg *stan.Msg) {
-		fmt.Printf("Получено сообщение: %s\n", string(msg.Data))
+	ordersFromCache, err := service.GetAllOrdersFromDB()
+	log.Printf("connect to cache and load data from db")
 
-		_, err = db.Exec("INSERT INTO messages (content) VALUES ($1)", string(msg.Data))
+	fmt.Printf("order in cache: %v\n", len(ordersFromCache))
+	//for _, v := range ordersFromCache {
+	//	fmt.Println(v)
+	//}
+	handlers := handler.NewHandler(service, sc, cache)
+
+	go func() {
+		err = handlers.SubToChannel("orders")
 		if err != nil {
-			log.Printf("Ошибка при записи в базу: %v", err)
+			log.Fatalf("error subscribe to channel: %s", err)
 		}
-	})
-	if err != nil {
-		log.Fatalf("Ошибка при подписке на сообщения: %v", err)
-	}
-	defer subscription.Unsubscribe()
-	for i := 0; i < 3; i++ {
-		err = sc.Publish(subject, []byte(message))
+	}()
+
+	serv := new(WB_L00.Server)
+
+	go func() {
+		err = serv.Run(":8000", handlers.InitRoutes())
 		if err != nil {
-			log.Fatalf("Ошибка при публикации сообщения: %v", err)
+			log.Fatalf("error start server: %s", err)
 		}
-		fmt.Printf("Сообщение опубликовано %d: %s\n", i, message)
+	}()
+	log.Println("Server started in port: 8000")
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	<-quit
+
+	log.Println("Shutting down server...")
+	if err := serv.Stop(context.Background()); err != nil {
+		log.Fatalf("error stop server: %s", err)
 	}
-
-	// Ожидание сигнала для завершения программы
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
-	<-stop
-	fmt.Println("Программа завершена")
-
 }
 
 func connectNatsStream() (stan.Conn, error) {
@@ -73,7 +87,6 @@ func connectNatsStream() (stan.Conn, error) {
 
 	sc, err := stan.Connect(clusterID, clientID, stan.NatsURL(natsURL), stan.ConnectWait(time.Minute))
 	if err != nil {
-		log.Fatalf("Ошибка при подключении к NATS Streaming: %v", err)
 		return nil, err
 	}
 	return sc, nil

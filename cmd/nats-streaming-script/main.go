@@ -24,7 +24,7 @@ func main() {
 	defer sc.Close()
 
 	// генерим заказы и отправляем в канал, принтуем UID каждого заказа
-	for i := 0; i < 3000; i++ {
+	for i := 0; i < 50; i++ {
 		order := createOrders()
 		orderJSON, err := json.Marshal(order)
 		if err != nil {
