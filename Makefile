@@ -1,8 +1,8 @@
 migrate:
-	migrate -path ./migrations -database 'postgres://postgres:qwerty@localhost:5432/orderswb?sslmode=disable' up
+	migrate -path ./migrations -database 'postgres://test_user:qwerty@localhost:5432/orderswb?sslmode=disable' up
 
 migrate_down:
-	migrate -path ./migrations -database 'postgres://postgres:qwerty@localhost:5432/orderswb?sslmode=disable' down
+	migrate -path ./migrations -database 'postgres://test_user:qwerty@localhost:5432/orderswb?sslmode=disable' down
 
 run_server:
 	go run cmd/main.go

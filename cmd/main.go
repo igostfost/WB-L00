@@ -21,8 +21,8 @@ func main() {
 	db, err := repository.NewPostgresDB(repository.Config{
 		Host:     "localhost",
 		Port:     "5432",
-		Username: "postgres",
-		Password: "4022",
+		Username: "test_user",
+		Password: "qwerty",
 		DBName:   "orderswb",
 		SSLMode:  "disable",
 	})
