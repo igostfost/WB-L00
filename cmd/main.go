@@ -30,7 +30,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Ошибка при подключении к базе данных: %v", err)
 	}
-	defer db.Close()
 
 	repos := repository.NewRepository(db)
 	service := services.NewService(repos)
@@ -39,17 +38,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("Ошибка при подключении к NATS Streaming: %v", err)
 	}
-	defer sc.Close()
-
-	cache := WB_L00.NewCache()
 
 	ordersFromCache, err := service.GetAllOrdersFromDB()
-	log.Printf("connect to cache and load data from db")
+	if err != nil {
+		log.Fatalf("Failed to get all orders from db: ", err)
+
+	}
+
+	cache := WB_L00.NewCache()
+	cache.RestoreFromDB(ordersFromCache)
+	log.Printf("connect to cache and get all orders from db")
 
 	fmt.Printf("order in cache: %v\n", len(ordersFromCache))
-	//for _, v := range ordersFromCache {
-	//	fmt.Println(v)
-	//}
+
 	handlers := handler.NewHandler(service, sc, cache)
 
 	go func() {
@@ -60,13 +61,14 @@ func main() {
 	}()
 
 	serv := new(WB_L00.Server)
-
 	go func() {
 		err = serv.Run(":8000", handlers.InitRoutes())
 		if err != nil {
-			log.Fatalf("error start server: %s", err)
+			log.Printf("error start server: %s", err)
+			return
 		}
 	}()
+
 	log.Println("Server started in port: 8000")
 
 	quit := make(chan os.Signal, 1)
@@ -75,7 +77,15 @@ func main() {
 
 	log.Println("Shutting down server...")
 	if err := serv.Stop(context.Background()); err != nil {
-		log.Fatalf("error stop server: %s", err)
+		log.Printf("error stop server: %s", err)
+	}
+
+	if err := sc.Close(); err != nil {
+		log.Printf("error close nats streaming client: %s", err)
+	}
+
+	if err := db.Close(); err != nil {
+		log.Printf("error close db: %s", err)
 	}
 }
 

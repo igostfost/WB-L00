@@ -24,7 +24,7 @@ func main() {
 	defer sc.Close()
 
 	// генерим заказы и отправляем в канал, принтуем UID каждого заказа
-	for i := 0; i < 50; i++ {
+	for i := 0; i < 33; i++ {
 		order := createOrders()
 		orderJSON, err := json.Marshal(order)
 		if err != nil {
@@ -94,6 +94,5 @@ func createOrders() types.Order {
 		}
 		order.Items = append(order.Items, item)
 	}
-	// fmt.Println("orderUID of generated order ", order.OrderUID)
 	return order
 }

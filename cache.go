@@ -2,12 +2,11 @@ package WB_L00
 
 import (
 	"WB_L00/types"
-	"fmt"
 	"sync"
 )
 
 type Cache struct {
-	mu   sync.Mutex
+	mu   sync.RWMutex
 	data map[string]types.Order
 }
 
@@ -22,13 +21,10 @@ func (c *Cache) SetOrder(order types.Order) {
 }
 
 func (c *Cache) GetOrderByUID(uid string) (types.Order, bool) {
-	c.mu.Lock()
-	defer c.mu.Lock()
-
-	fmt.Println(uid)
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	order, ok := c.data[uid]
-	fmt.Println(order)
 	return order, ok
 }
 

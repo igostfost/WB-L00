@@ -29,9 +29,8 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	router := gin.Default()
 	router.LoadHTMLGlob("web/*")
 	router.GET("/", h.getForm)
-	//router.GET("/order", h.GetOrderByIDHandler)
 
-	router.POST("/or", h.GetOrderByIDHandler)
+	router.POST("/order", h.GetOrderByIDHandler)
 
 	router.NoRoute(func(c *gin.Context) {
 		c.HTML(http.StatusNotFound, "notFound.html", nil)
